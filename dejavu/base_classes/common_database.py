@@ -257,7 +257,7 @@ class CommonDatabase(BaseDatabase, metaclass=abc.ABCMeta):
                         db_offsets = []
                         ch_offsets = []
                         map_db_offsets[sid] = db_offsets
-                        map_db_offsets[sid] = ch_offsets
+                        map_ch_offsets[sid] = ch_offsets
                     else:
                         db_offsets = map_db_offsets[sid]
                         ch_offsets = map_ch_offsets[sid]
