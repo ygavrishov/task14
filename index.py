@@ -21,4 +21,4 @@ if __name__ == '__main__':
     djv = Dejavu(config)
 
     # Fingerprint all the mp3's in the directory we give it
-    djv.fingerprint_directory("mytest", [".mp3"])
+    djv.fingerprint_directory("mytest", [".mp4"])
