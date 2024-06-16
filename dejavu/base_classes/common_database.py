@@ -251,12 +251,14 @@ class CommonDatabase(BaseDatabase, metaclass=abc.ABCMeta):
                 for hsh, sid, offset in rows:
                     if sid not in dedup_hashes.keys():
                         dedup_hashes[sid] = 1
+                    else:
+                        dedup_hashes[sid] += 1
+                    if sid not in map_db_offsets.keys():
                         db_offsets = []
                         ch_offsets = []
                         map_db_offsets[sid] = db_offsets
                         map_db_offsets[sid] = ch_offsets
                     else:
-                        dedup_hashes[sid] += 1
                         db_offsets = map_db_offsets[sid]
                         ch_offsets = map_ch_offsets[sid]
                     #  we now evaluate all offset for each  hash matched
