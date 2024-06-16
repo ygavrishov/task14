@@ -22,7 +22,6 @@ if __name__ == '__main__':
 
     # Print the command-line arguments
     if len(sys.argv) > 1:
-        results = djv.recognize(FileRecognizer, sys.argv[1])
-        print(f"From file we recognized: {results}\n")
+        djv.recognize(FileRecognizer, sys.argv[1])
     else:
         print("No arguments provided.")

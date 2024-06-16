@@ -194,18 +194,17 @@ class CommonDatabase(BaseDatabase, metaclass=abc.ABCMeta):
             groups.append(current_group)
         return [np.array(group) for group in groups if len(group) > MIN_GROUP_SIZE]
     
-    def convert_to_sec(self, value):
-        MULTIPLIER = 21.0839160839
-        return int(value / MULTIPLIER)
-    
     def convert_to_sec2(self, offset):
         return round(float(offset) / DEFAULT_FS * DEFAULT_WINDOW_SIZE * DEFAULT_OVERLAP_RATIO, 5)
     
 
     def get_bounds_in_sec(self, data):
         groups = self.group_points(data)
-        g1 = groups[0]
-        return (self.convert_to_sec2(g1.min()), self.convert_to_sec2(g1.max()))
+        if len(groups) > 0:
+            g1 = groups[0]
+            return (self.convert_to_sec2(g1.min()), self.convert_to_sec2(g1.max()))
+        else:
+            return (-1, -1)
         
 
     def return_matches(self, hashes: List[Tuple[str, int]],
@@ -248,8 +247,6 @@ class CommonDatabase(BaseDatabase, metaclass=abc.ABCMeta):
                 rows = cur.fetchall()
 
                 for hsh, sid, offset in rows:
-                    if sid != 4:
-                        continue
                     if sid not in dedup_hashes.keys():
                         dedup_hashes[sid] = 1
                     else:
@@ -287,9 +284,13 @@ class CommonDatabase(BaseDatabase, metaclass=abc.ABCMeta):
             mask = (deltas >= lower_bound) & (deltas < upper_bound)
             stored_filtered = stored_np[mask]
             sample_filtered = sample_np[mask]
-            (xmin, xmax) = self.get_bounds_in_sec(stored_filtered)
-            (ymin, ymax) = self.get_bounds_in_sec(sample_filtered)
-            print (f"{xmin}, {xmax}, {ymin}, {ymax}")
+            if hist.max() > 100:
+                (xmin, xmax) = self.get_bounds_in_sec(stored_filtered)
+                (ymin, ymax) = self.get_bounds_in_sec(sample_filtered)
+                print (f"Original file segment: {xmin}, {xmax}")
+                print (f"Checked file segment: {ymin}, {ymax}")
+            else:
+                print("No reusage found.")
 
             return results, dedup_hashes
 

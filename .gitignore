@@ -3,5 +3,6 @@ wav
 mp3
 *.wav
 *.mp3
+*.mp4
 .DS_Store
 *.cnf
