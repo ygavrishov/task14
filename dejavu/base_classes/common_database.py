@@ -236,8 +236,10 @@ class CommonDatabase(BaseDatabase, metaclass=abc.ABCMeta):
         dedup_hashes = {}
 
         results = []
-        stored_offsets = []
-        sample_offsets = []
+        # stored_offsets = []
+        # sample_offsets = []
+        map_db_offsets={}
+        map_ch_offsets={}
         with self.cursor() as cur:
             for index in range(0, len(values), batch_size):
                 # Create our IN part of the query
@@ -249,48 +251,59 @@ class CommonDatabase(BaseDatabase, metaclass=abc.ABCMeta):
                 for hsh, sid, offset in rows:
                     if sid not in dedup_hashes.keys():
                         dedup_hashes[sid] = 1
+                        db_offsets = []
+                        ch_offsets = []
+                        map_db_offsets[sid] = db_offsets
+                        map_db_offsets[sid] = ch_offsets
                     else:
                         dedup_hashes[sid] += 1
+                        db_offsets = map_db_offsets[sid]
+                        ch_offsets = map_ch_offsets[sid]
                     #  we now evaluate all offset for each  hash matched
                     for song_sampled_offset in mapper[hsh]:
                         results.append((sid, offset - song_sampled_offset))
-                        stored_offsets.append(offset)
-                        sample_offsets.append(song_sampled_offset)
-            stored_np = np.array(stored_offsets)
-            sample_np = np.array(sample_offsets)
-            deltas = stored_np - sample_np
-            bin_width = 5
-            bins = np.arange(deltas.min(), deltas.max() + bin_width, bin_width)
-            hist, bin_edges = np.histogram(deltas, bins = bins)
-
-            plt.scatter(stored_offsets, sample_offsets)
-            plt.grid(True)
-            print ('Saving results...')
-            plt.savefig('result.png')
-            plt.show()
-            plt.close()
-            
-            print ('Saving histogram...')
-            plt.hist(deltas, bins=bins)
-            plt.grid(True)
-            plt.savefig('hist.png')
-            plt.show()
-            plt.close()
-            
-            max_bin_index = np.argmax(hist)
-            lower_bound = bin_edges[max_bin_index]
-            upper_bound = bin_edges[max_bin_index + 1]
-            
-            mask = (deltas >= lower_bound) & (deltas < upper_bound)
-            stored_filtered = stored_np[mask]
-            sample_filtered = sample_np[mask]
-            if hist.max() > 100:
-                (xmin, xmax) = self.get_bounds_in_sec(stored_filtered)
-                (ymin, ymax) = self.get_bounds_in_sec(sample_filtered)
-                print (f"Original file segment: {xmin}, {xmax}")
-                print (f"Checked file segment: {ymin}, {ymax}")
-            else:
+                        db_offsets.append(offset)
+                        ch_offsets.append(song_sampled_offset)
+            found = False
+            for sid in dedup_hashes.keys():
+                stored_np = np.array(map_db_offsets[sid])
+                sample_np = np.array(map_ch_offsets[sid])
+                deltas = stored_np - sample_np
+                bin_width = 5
+                bins = np.arange(deltas.min(), deltas.max() + bin_width, bin_width)
+                hist, bin_edges = np.histogram(deltas, bins = bins)
+                
+                max_bin_index = np.argmax(hist)
+                lower_bound = bin_edges[max_bin_index]
+                upper_bound = bin_edges[max_bin_index + 1]
+                
+                mask = (deltas >= lower_bound) & (deltas < upper_bound)
+                stored_filtered = stored_np[mask]
+                sample_filtered = sample_np[mask]
+                if hist.max() > 100:
+                    (xmin, xmax) = self.get_bounds_in_sec(stored_filtered)
+                    (ymin, ymax) = self.get_bounds_in_sec(sample_filtered)
+                    song = self.get_song_by_id(sid)
+                    print (f"Song: {song}")
+                    print (f"Original file segment: {xmin}, {xmax}")
+                    print (f"Checked file segment: {ymin}, {ymax}")
+                    found = True
+            if not found:
                 print("No reusage found.")
+
+            # plt.scatter(stored_offsets, sample_offsets)
+            # plt.grid(True)
+            # print ('Saving results...')
+            # plt.savefig('result.png')
+            # plt.show()
+            # plt.close()
+            
+            # print ('Saving histogram...')
+            # plt.hist(deltas, bins=bins)
+            # plt.grid(True)
+            # plt.savefig('hist.png')
+            # plt.show()
+            # plt.close()
 
             return results, dedup_hashes
 
